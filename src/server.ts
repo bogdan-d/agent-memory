@@ -39,6 +39,7 @@ export function createServer(store: Store): McpServer {
 				project: z.string().optional().describe("ID of a project to read instead of the one you are working in."),
 				cwd: cwdShape,
 			},
+			annotations: { readOnlyHint: true },
 		},
 		({ query, project: id, cwd }) => {
 			const project = id ? projectNamed(id) : projectAt(cwd);
@@ -54,6 +55,7 @@ export function createServer(store: Store): McpServer {
 		{
 			description: "Fetch complete entries by id, including retired ones.",
 			inputSchema: { ids: z.array(z.number().int().positive()).min(1).max(20) },
+			annotations: { readOnlyHint: true },
 		},
 		({ ids }) => {
 			const entries = store.get(ids);
