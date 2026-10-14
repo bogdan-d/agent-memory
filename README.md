@@ -95,6 +95,17 @@ Start a new session in either client. Its context should open with `# Agent memo
 
 Remove the hook entry, run `claude mcp remove --scope user agent-memory` and `codex mcp remove agent-memory`, and delete `~/.local/share/agent-memory/` if you no longer want the data.
 
+## Inspecting memories
+
+To browse, edit and retire entries yourself, start the local inspector and open the address it prints:
+
+```bash
+bun /path/to/agent-memory/src/cli.ts inspect             # http://127.0.0.1:4870
+bun /path/to/agent-memory/src/cli.ts inspect --port 9000
+```
+
+The page lists every entry, retired ones included, with text, scope and kind filters, each entry's revision history, and times in local time. Edits save a new revision as author `inspector` and fail if the entry changed since it was loaded. Editing a retired entry revives it. The server listens on `127.0.0.1` only, and its API accepts requests only from the page itself. Stop it with Ctrl+C.
+
 ## MCP tools
 
 | Tool | Behavior |
@@ -125,9 +136,7 @@ export                                  All active entries as Markdown
 backup [directory]                      Consistent snapshot, by default under backups/ next to the database
 ```
 
-`remember` reads the content from stdin when `--content` is omitted.
-
-`inspect` serves a page on `127.0.0.1` that lists every entry, retired ones included, with text, scope and kind filters, each entry's revision history, and times in local time. Edits save a new revision as author `inspector` and fail if the entry changed since it was loaded. Editing a retired entry revives it. The page's API accepts requests only from the page itself. To restore a backup, stop the clients and copy the snapshot over the database file.
+`remember` reads the content from stdin when `--content` is omitted. To restore a backup, stop the clients and copy the snapshot over the database file.
 
 ## Limits
 
