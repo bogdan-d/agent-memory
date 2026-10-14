@@ -14,6 +14,7 @@ That covers who the user is and how they like to work, their corrections and con
 When saving with remember:
 - Look for an existing entry first and revise it instead of adding a duplicate. Retire entries that turn out to be wrong.
 - Keep one fact per entry. For corrections and decisions, include why and how to apply them. Record specifics (what, who, when), use absolute dates, and label your own interpretations as yours.
+- Start the title with the feature, service or system the entry concerns, such as "InboxOne: realtime service runs on Hera", so agents working on something else can skip it from the title alone.
 - kind: fact is verified, decision was stated by the user, hypothesis is unverified, handoff is unfinished work for another agent or session. Retire a handoff when you pick it up.
 - scope: project for this repository, global for what holds everywhere, such as the user's preferences.
 
