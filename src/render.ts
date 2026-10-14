@@ -14,7 +14,7 @@ That covers who the user is and how they like to work, their corrections and con
 When saving with remember:
 - Look for an existing entry first and revise it instead of adding a duplicate. Retire entries that turn out to be wrong.
 - Keep one fact per entry. Write the rule or fact directly and concisely, refer to the user as "the user", and put dates and sources in evidence rather than the content. For corrections and decisions, add the reason in one sentence. Label your own interpretations as yours.
-- Start the title with the feature, service or system the entry concerns, such as "InboxOne: realtime service runs on Hera", so agents working on something else can skip it from the title alone.
+- Start the title with the feature, service or system the entry concerns, such as "Billing: invoices are generated nightly", so agents working on something else can skip it from the title alone.
 - kind: fact is verified, decision was stated by the user, hypothesis is unverified, handoff is unfinished work for another agent or session. Retire a handoff when you pick it up.
 - scope: project for this repository, global for what holds everywhere, such as the user's preferences.
 

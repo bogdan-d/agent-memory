@@ -45,11 +45,13 @@ Saving is left to the agent, following the guidance in the overview: save only w
 Requires Bun 1.4.3 or newer.
 
 ```bash
+git clone https://github.com/bogdan-d/agent-memory.git
+cd agent-memory
 bun install
 bun check && bun test
 ```
 
-Use absolute paths in the configuration below, because clients do not always start hooks with your shell's `PATH`.
+The database is created empty on first use. Use absolute paths in the configuration below, because clients do not always start hooks with your shell's `PATH`.
 
 ### MCP server
 
@@ -57,6 +59,17 @@ Use absolute paths in the configuration below, because clients do not always sta
 claude mcp add --scope user agent-memory -- /path/to/bun /path/to/agent-memory/src/cli.ts mcp
 codex mcp add agent-memory -- /path/to/bun /path/to/agent-memory/src/cli.ts mcp
 ```
+
+Codex asks for approval the first time an agent calls each MCP tool; choosing to always allow it saves `approval_mode = "approve"` for that tool in `~/.codex/config.toml`. To skip the prompts, set a default for the server there:
+
+```toml
+[mcp_servers.agent-memory]
+command = "/path/to/bun"
+args = ["/path/to/agent-memory/src/cli.ts", "mcp"]
+default_tools_approval_mode = "approve"
+```
+
+With `approve`, `register_project` and `assign_group` also run without a prompt; the guidance still tells agents to call them only after you agree. To keep a prompt for every write, use `writes` instead: `recall` and `get` are marked read-only and run without one. A per-tool `[mcp_servers.agent-memory.tools.<tool>]` table with its own `approval_mode` overrides the default.
 
 ### Session-start hook
 
@@ -69,6 +82,14 @@ Both clients take the same hook definition. Merge it into the `hooks` key of `~/
 ```
 
 The hook reads the database directly, so it works before the MCP server is connected. It also runs after resume, clear and compaction.
+
+### Built-in memory
+
+Turn off Claude Code's auto memory so the two do not compete: set `"autoMemoryEnabled": false` in `~/.claude/settings.json`. Leave Codex's built-in memories off, which is its default.
+
+### Check the install
+
+Start a new session in either client. Its context should open with `# Agent memory` and the usage guidance, and `/mcp` should list `agent-memory` as connected. From a terminal, `bun /path/to/agent-memory/src/cli.ts list` should print nothing and exit without an error.
 
 ### Uninstall
 
