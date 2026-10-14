@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { parseArgs } from "node:util";
 import { z } from "zod";
+import { inspect } from "./inspect";
 import { readScopes, register, resolveProject, writeScope } from "./project";
 import { renderEntries, renderEntry, renderExport, renderOverview } from "./render";
 import { rememberInput } from "./schema";
@@ -20,6 +21,7 @@ const USAGE = `agent-memory <command>
                                        Create or revise an entry; content comes from stdin when omitted
   retire <id>                          Retire an entry
   export                               Print all active entries as Markdown
+  inspect [--port n]                   Browse, edit and retire entries in a local web page
   backup [directory]                   Write a consistent database snapshot
 
 Database: $AGENT_MEMORY_DB, default ~/.local/share/agent-memory/memory.sqlite3`;
@@ -127,6 +129,11 @@ async function main(command: string | undefined, args: string[]): Promise<void> 
 			const entry = store.retire(entryId(args[0]), "cli");
 			if (!entry) throw new Error("no such entry");
 			return console.log(renderEntry(entry));
+		}
+
+		case "inspect": {
+			const { values } = parseArgs({ args, options: { port: { type: "string", default: "4870" } } });
+			return console.log(`Agent memory inspector: ${inspect(store, Number(values.port)).url}`);
 		}
 
 		case "export":

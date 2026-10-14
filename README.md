@@ -99,11 +99,14 @@ retire <id>
 projects                                Registered projects
 register [--group g] [--id slug] <path>...
                                         Register projects or set their group; without --group the group is cleared
+inspect [--port n]                      Browse, edit and retire entries in a local web page (default port 4870)
 export                                  All active entries as Markdown
 backup [directory]                      Consistent snapshot, by default under backups/ next to the database
 ```
 
-`remember` reads the content from stdin when `--content` is omitted. To restore a backup, stop the clients and copy the snapshot over the database file.
+`remember` reads the content from stdin when `--content` is omitted.
+
+`inspect` serves a page on `127.0.0.1` that lists every entry, retired ones included, with text, scope and kind filters, each entry's revision history, and times in local time. Edits save a new revision as author `inspector` and fail if the entry changed since it was loaded. Editing a retired entry revives it. The page's API accepts requests only from the page itself. To restore a backup, stop the clients and copy the snapshot over the database file.
 
 ## Limits
 
