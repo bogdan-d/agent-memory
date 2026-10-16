@@ -9,7 +9,8 @@
   },
   "scripts": {
     "check": "bun check",
-    "test": "bun test"
+    "test": "bun test",
+    "inspect": "bun src/cli.ts inspect"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
