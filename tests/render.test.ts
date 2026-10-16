@@ -22,9 +22,11 @@ test("the overview shows handoffs and pinned entries in full, indexes the rest, 
 	expect(overview).toContain("Pinned body.");
 	expect(overview).toContain("Minor detail");
 	expect(overview).not.toContain("Indexed body.");
+	expect(overview).toContain("This list is complete.");
 
 	const cut = renderOverview(null, [], entries, 150);
 	expect(cut).toContain("Step 3 remains.");
 	expect(cut).not.toContain("Pinned body.");
 	expect(cut).toContain("more lines omitted");
+	expect(cut).not.toContain("This list is complete.");
 });

@@ -19,7 +19,7 @@ const text = (value: string) => ({ content: [{ type: "text" as const, text: valu
 const failure = (value: string) => ({ ...text(value), isError: true });
 
 export function createServer(store: Store): McpServer {
-	const server = new McpServer({ name: "agent-memory", version: "0.1.0" }, { instructions: INSTRUCTIONS });
+	const server = new McpServer({ name: "agent-memory", version: "0.2.0" }, { instructions: INSTRUCTIONS });
 	const author = () => server.server.getClientVersion()?.name ?? "mcp";
 	const projectAt = (cwd: string | undefined) => resolveProject(store, cwd ?? process.cwd());
 	const projectNamed = (id: string) => {
@@ -33,7 +33,7 @@ export function createServer(store: Store): McpServer {
 		"recall",
 		{
 			description:
-				"Search memory for the current project, or one named by ID, plus its group and global scope. Without a query, returns the overview: open handoffs, pinned entries and an index of the rest.",
+				"Search memory for the current project, or one named by ID, plus its group and global scope. Without a query, returns the overview: open handoffs, pinned entries and an index of the rest. Call once per task, not for each step or follow-up.",
 			inputSchema: {
 				query: z.string().optional().describe("Free text. Any word may match; best matches come first."),
 				project: z.string().optional().describe("ID of a project to read instead of the one you are working in."),
