@@ -10,6 +10,23 @@ const INSTRUCTIONS =
 	"Persistent memory shared by the coding agents on this machine. A session-start hook normally puts the agent-memory " +
 	"overview and its usage guidance in your context. If it is missing, call recall with no query before using the other tools.";
 
+// Saving rules live here rather than in the session overview: MCP tools are deferred, so these load only when an agent saves.
+const REMEMBER = `Create an entry, or revise the one with the same scope and key. Revising requires expected_revision and replaces every field.
+
+Save only what is applicable and durable:
+- applicable: it would directly change how an agent works in a future session, such as an approach the user corrected or confirmed, a standing preference, or a finding that took real investigation.
+- durable: it holds across future sessions and tasks, not just this one. If you are unsure, do not save it.
+
+That covers who the user is and how they like to work, their corrections and confirmed approaches, project goals, constraints and decisions the code and git history do not show, and pointers to external resources or environment facts they would otherwise have to restate. Do not save what the repository already records (code structure, past fixes, git history, AGENTS.md or CLAUDE.md), summaries of completed work, or secrets.
+
+How to write it:
+- Look for an existing entry first and revise it instead of adding a duplicate. Retire entries that turn out to be wrong.
+- Keep one fact per entry. Write the rule or fact directly and concisely, refer to the user as "the user", and put dates and sources in evidence rather than the content. For corrections and decisions, add the reason in one sentence. Label your own interpretations as yours.
+- Start the title with the feature, service or system the entry concerns, such as "Billing: invoices are generated nightly", so agents working on something else can skip it from the title alone.
+- Retire a handoff when you pick it up.
+
+Groups let related repositories share entries. When an entry applies to several related repositories that are not in a group yet, tell the user and offer to create one with assign_group. Create or change a group only after the user agrees.`;
+
 const cwdShape = z
 	.string()
 	.optional()
@@ -66,8 +83,7 @@ export function createServer(store: Store): McpServer {
 	server.registerTool(
 		"remember",
 		{
-			description:
-				"Create an entry, or revise the one with the same scope and key. Revising requires expected_revision and replaces every field.",
+			description: REMEMBER,
 			inputSchema: { ...rememberShape, cwd: cwdShape },
 		},
 		({ cwd, scope, expected_revision, ...fields }) => {

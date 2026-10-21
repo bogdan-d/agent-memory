@@ -38,7 +38,7 @@ An entry has a scope, a stable key, a kind, a title, content of at most 4,000 ch
 - **Search:** full text over key, title and content, ranked toward titles, with word stemming. It returns at most eight entries.
 - **Overview:** the usage guidance, then open handoffs and pinned entries in full, then the other entries one line each. When everything fits, it says the list is complete, so agents fetch entries with `get` instead of searching; the guidance asks for at most one `recall` per task.
 
-Saving is left to the agent, following the guidance in the overview: save only what is applicable and durable, revise instead of duplicating, and never store secrets or what the repository already records. Nothing prompts the agent at the end of a turn.
+Saving is left to the agent, following the rules in the `remember` tool description, which load only when the agent saves: save only what is applicable and durable, revise instead of duplicating, and never store secrets or what the repository already records. Nothing prompts the agent at the end of a turn.
 
 ## Setup
 

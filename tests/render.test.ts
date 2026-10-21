@@ -17,7 +17,7 @@ test("the overview shows handoffs and pinned entries in full, indexes the rest, 
 	rmSync(dir, { recursive: true });
 
 	const overview = renderOverview(null, [], entries);
-	expect(overview).toContain("Save only what is applicable and durable");
+	expect(overview).toContain("save it with remember");
 	expect(overview).toContain("Step 3 remains.");
 	expect(overview).toContain("Pinned body.");
 	expect(overview).toContain("Minor detail");
