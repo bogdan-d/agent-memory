@@ -123,15 +123,16 @@ bun tree                  # http://127.0.0.1:4871
 bun tree --port 9000
 ```
 
-The page draws all memory as one left-to-right tree: `global`, then each group with its entries and member projects, then the projects in no group, each with its entries. Collapsed nodes show how many entries lie beneath them and a bar split by kind. Entries are dots coloured by kind, pinned ones ringed and starred; retired entries stay hidden until you show them. Groups whose entries no project reads, because the group has no members left, are marked and listed in the summary.
+The page draws all memory as one left-to-right tree: `global`, then each group with its entries and member projects, then the projects in no group, each with its entries. Collapsed nodes show how many entries lie beneath them and a bar split by kind. Entries are listed as agents see them in their session-start overview: `[id]` and the full title, open handoffs first, then pinned entries, then the rest, newest first. Their dots are coloured by kind and pinned ones are ringed; retired entries stay hidden until you show them, and then come last. Groups whose entries no project reads, because the group has no members left, are marked and listed in the summary.
 
 - **Navigate:** scroll or drag the background to pan (Shift+scroll pans sideways), Ctrl+scroll or pinch to zoom, click a node to open it and its arrow to collapse it. Expand all, collapse all and fit act on the whole tree; fit never shrinks text below a readable size, so a tall tree shows its top and you scroll for the rest.
+- **Panel:** drag the divider to resize the side panel; the page remembers the width. Double-click the divider to reset it.
 - **Live:** the page checks for changes every few seconds and when the tab becomes visible again, so entries agents save appear without a reload. An open form or a focused panel control is left as it is.
 - **Filter:** text matches entry IDs, keys, titles, content and evidence, and project and group names. Matches are highlighted, everything else is dimmed, and the path to every match is opened.
 - **Summary:** totals per scope and kind, with pinned entries, open handoffs and retired entries. Click a row to show that scope in the tree.
 - **Entries:** clicking one shows its content, evidence and revision history, with edit, retire, move and, for retired entries, permanent delete. These behave as in the inspector. The + on global, a group or a project adds an entry there.
-- **Move:** drag an entry onto global, a group or a project, or choose the target in its panel.
-- **What its agents see:** a project's panel shows the session-start overview its agents get, with how much of the 6,000-character entry budget it uses and how many lines were cut. Cut entries reach agents only through `recall`.
+- **Move:** drag an entry onto global, a group or a project, or choose the target in its panel. Esc cancels a drag.
+- **What its agents see:** a project's panel shows the session-start overview its agents get, and global's panel the one for a folder that is not a registered project, with how much of the 6,000-character entry budget it uses and how many lines were cut. Cut entries reach agents only through `recall`.
 - **Regroup:** drag a project onto a group or onto “no group”, or pick a group in its panel, where you can also name a new one. The page asks first, because a project's agents read its group's entries; it names the entries the project gains and loses access to.
 
 Theme follows the system and can be switched to light or dark. The server, like the inspector's, listens on `127.0.0.1` only and accepts API requests only from the page itself.

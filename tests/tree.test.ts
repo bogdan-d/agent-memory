@@ -42,6 +42,9 @@ test("the tree page lists projects and regroups them, validating group names and
 		expect(overview.text).toContain("Deploy with make (group:shop, fact)");
 		expect(overview.omitted).toBe(0);
 		expect((await fetch(url("/api/projects/nope/overview"))).status).toBe(404);
+		const outside = (await (await fetch(url("/api/overview"))).json()) as { text: string };
+		expect(outside.text).toContain("Project: none here");
+		expect(outside.text).not.toContain("Deploy with make");
 
 		// A new group exists as soon as a project is put in it, and becomes a scope entries can use.
 		await regroup("web", { group: "new-group" });

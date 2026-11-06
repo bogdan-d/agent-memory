@@ -75,8 +75,10 @@ const nodes = new Map<string, TreeNode>();
 const parents = new Map<string, string>();
 
 const entryText = (entry: Entry) => [`#${entry.id}`, entry.key, entry.title, entry.content, ...entry.evidence].join("\n").toLowerCase();
-const entryOrder = (a: Entry, b: Entry) =>
-	Number(b.pinned) - Number(a.pinned) || KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind) || a.title.localeCompare(b.title);
+// The order of the session-start overview: open handoffs, then pinned entries, then the rest, each newest first.
+// Retired entries, which agents do not see, come last.
+const rank = (entry: Entry) => (entry.retired ? 3 : entry.kind === "handoff" ? 0 : entry.pinned ? 1 : 2);
+const entryOrder = (a: Entry, b: Entry) => rank(a) - rank(b) || b.updatedAt.localeCompare(a.updatedAt) || b.id - a.id;
 const groupNames = () =>
 	[...new Set([...projects.flatMap((project) => (project.group ? [project.group] : [])), ...entries.flatMap((entry) => (entry.scope.startsWith("group:") ? [entry.scope.slice(6)] : []))])].sort();
 
@@ -161,7 +163,8 @@ const ROW = 24;
 const GAP = 56;
 const BAR = 36;
 const SCOPE_FONT = "600 13px system-ui, sans-serif";
-const ENTRY_FONT = "12.5px system-ui, sans-serif";
+// Entry titles turn bold on hover and selection, so rows are sized for the bold title.
+const ENTRY_FONT = "600 12.5px system-ui, sans-serif";
 const SMALL_FONT = "11px system-ui, sans-serif";
 const measurer = document.createElement("canvas").getContext("2d");
 const textWidth = (text: string, font: string) => {
@@ -170,7 +173,7 @@ const textWidth = (text: string, font: string) => {
 	return measurer.measureText(text).width;
 };
 
-const entryLabel = (entry: Entry) => `${entry.pinned ? "★ " : ""}${entry.title.length > 72 ? `${entry.title.slice(0, 71)}…` : entry.title}`;
+const entryId = (entry: Entry) => `[${entry.id}] `;
 const addable = (node: TreeNode) => scopes.includes(node.id as Scope);
 
 // Pieces of a scope pill, left to right: chevron, label, count, kind bar, add button.
@@ -183,7 +186,7 @@ function pill(node: TreeNode) {
 }
 
 const nodeWidth = (node: TreeNode) =>
-	node.entry ? 16 + textWidth(entryLabel(node.entry), ENTRY_FONT) + textWidth(` #${node.entry.id}`, SMALL_FONT) : pill(node).width;
+	node.entry ? 16 + textWidth(entryId(node.entry), SMALL_FONT) + textWidth(node.entry.title, ENTRY_FONT) : pill(node).width;
 
 function layout(root: TreeNode): Map<string, Placed> {
 	const open = (node: TreeNode) => node.children.length > 0 && expanded.has(node.id);
@@ -259,7 +262,7 @@ function drawNode(node: TreeNode, width: number): SVGGElement {
 			svg("rect", { class: "hit", x: -4, y: -ROW / 2 + 1, width: width + 8, height: ROW - 2, rx: 4 }),
 			...(entry.pinned ? [svg("circle", { class: "ring", cx: 5, r: 8 })] : []),
 			svg("circle", { class: "dot", cx: 5, r: 5 }),
-			svg("text", { x: 16 }, entryLabel(entry), svg("tspan", { class: "id" }, ` #${entry.id}`)),
+			svg("text", { x: 16 }, svg("tspan", { class: "id" }, entryId(entry)), entry.title),
 		);
 		return g;
 	}
@@ -547,10 +550,12 @@ canvas.addEventListener("pointermove", (event) => {
 	}
 });
 
-function endGesture(event: PointerEvent, cancelled: boolean) {
-	if (!gesture || event.pointerId !== gesture.pointer) return;
+// Ends the current gesture. A cancelled one clicks and drops nothing.
+function endGesture(cancelled: boolean) {
 	const done = gesture;
+	if (!done) return;
 	gesture = null;
+	if (canvas.hasPointerCapture(done.pointer)) canvas.releasePointerCapture(done.pointer);
 	canvas.classList.remove("panning");
 	done.ghost?.remove();
 	for (const element of nodeLayer.querySelectorAll(".drop-target, .drop-hover, .dragging-source")) {
@@ -560,8 +565,8 @@ function endGesture(event: PointerEvent, cancelled: boolean) {
 	if (done.mode === "press") click(done.id, done.target);
 	if (done.mode === "drag" && done.id && done.hover) void drop(done.id, done.hover);
 }
-canvas.addEventListener("pointerup", (event) => endGesture(event, false));
-canvas.addEventListener("pointercancel", (event) => endGesture(event, true));
+canvas.addEventListener("pointerup", (event) => event.pointerId === gesture?.pointer && endGesture(false));
+canvas.addEventListener("pointercancel", (event) => event.pointerId === gesture?.pointer && endGesture(true));
 
 function click(id: string | null, target: Element) {
 	const node = id ? nodes.get(id) : undefined;
@@ -716,7 +721,7 @@ function showPanel() {
 	if (entry) return void showEntry(entry);
 	const node = nodes.get(selected);
 	if (!node || node.type === "root") return showSummary();
-	if (overviewOpen && node.project) return void showOverview(node.project);
+	if (overviewOpen && (node.project || node.type === "global")) return void showOverview(node.project ?? null);
 	showScope(node);
 }
 
@@ -784,7 +789,17 @@ function showScope(node: TreeNode) {
 		el("ul", {}, ...list.map((child) => el("li", {}, el("a", { href: "#", textContent: child.label, onclick: (event) => (event.preventDefault(), select(child.id)) }), el("small", { textContent: ` ${child.total}` }))));
 
 	if (node.type === "global") {
-		return panel.replaceChildren(el("h1", { textContent: "global" }), el("p", { textContent: "Read by every agent, in every project." }), countsLine(node), el("div", { className: "actions" }, ...add));
+		return panel.replaceChildren(
+			el("h1", { textContent: "global" }),
+			el("p", { textContent: "Read by every agent, in every project." }),
+			countsLine(node),
+			el(
+				"div",
+				{ className: "actions" },
+				...add,
+				el("button", { textContent: "What agents outside a project see", onclick: () => ((overviewOpen = true), showPanel()) }),
+			),
+		);
 	}
 	if (node.type === "ungrouped") {
 		return panel.replaceChildren(
@@ -851,9 +866,11 @@ function showScope(node: TreeNode) {
 	);
 }
 
-async function showOverview(project: Project) {
+// The session-start overview of a project, or with null, of a folder that is not a registered project.
+async function showOverview(project: Project | null) {
 	const id = selected;
-	const result = await api<Overview>(`/api/projects/${encodeURIComponent(project.id)}/overview`).catch((failure: unknown) => message(failure));
+	const path = project ? `/api/projects/${encodeURIComponent(project.id)}/overview` : "/api/overview";
+	const result = await api<Overview>(path).catch((failure: unknown) => message(failure));
 	// A later selection may have finished first.
 	if (selected !== id || !overviewOpen) return;
 	const back = el("button", { textContent: "Back", onclick: () => ((overviewOpen = false), showPanel()) });
@@ -861,8 +878,11 @@ async function showOverview(project: Project) {
 	const { text, used, budget, omitted } = result;
 	const percent = Math.round((used / budget) * 100);
 	panel.replaceChildren(
-		el("h1", { textContent: `Session start in ${project.id}` }),
-		el("p", { className: "meta", textContent: "What an agent in this project gets in its context when a session starts. Index lines are fetched in full with get." }),
+		el("h1", { textContent: project ? `Session start in ${project.id}` : "Session start outside a project" }),
+		el("p", {
+			className: "meta",
+			textContent: `What an agent ${project ? "in this project" : "in a folder that is not a registered project"} gets in its context when a session starts. Index lines are fetched in full with get.`,
+		}),
 		el("meter", { min: 0, max: budget, value: used, low: budget * 0.75, high: budget * 0.9, optimum: 0 }),
 		el("p", { className: "meta", textContent: `Entries use ${used.toLocaleString()} of ${budget.toLocaleString()} characters (${percent}%).` }),
 		omitted
@@ -929,7 +949,7 @@ function showSummary() {
 			"ul",
 			{ className: "meta" },
 			el("li", { textContent: "Click a node to open it, its arrow to collapse it, and + to add an entry there." }),
-			el("li", { textContent: "Drag an entry onto global, a group or a project to move it; drag a project onto a group or “no group” to regroup it." }),
+			el("li", { textContent: "Drag an entry onto global, a group or a project to move it; drag a project onto a group or “no group” to regroup it. Esc cancels a drag." }),
 			el("li", { textContent: "Scroll or drag the background to pan (Shift+scroll pans sideways); Ctrl+scroll or pinch to zoom." }),
 			el("li", { textContent: "Changes made by agents show up within a few seconds." }),
 			el("li", {}, el("kbd", { textContent: "/" }), " filter · ", el("kbd", { textContent: "Esc" }), " back to the summary"),
@@ -1035,6 +1055,43 @@ $<HTMLButtonElement>("collapse").addEventListener("click", () => {
 $<HTMLButtonElement>("fit").addEventListener("click", () => fit());
 $<HTMLButtonElement>("summary").addEventListener("click", () => select("root"));
 
+// Panel width: drag the divider to resize, double-click it to reset. The chosen width persists.
+const resizer = $<HTMLElement>("resizer");
+const PANEL_WIDTH = "agent-memory-panel-width";
+let panelWidth = Number(localStorage.getItem(PANEL_WIDTH)) || 0;
+// Keeps at least 320 pixels for the tree, and a 280-pixel panel.
+function applyPanelWidth() {
+	if (!panelWidth) return document.body.style.removeProperty("--panel-width");
+	const width = Math.max(280, Math.min(panelWidth, window.innerWidth - 320));
+	document.body.style.setProperty("--panel-width", `${Math.round(width)}px`);
+}
+applyPanelWidth();
+window.addEventListener("resize", applyPanelWidth);
+resizer.addEventListener("pointerdown", (event) => {
+	event.preventDefault();
+	resizer.setPointerCapture(event.pointerId);
+	resizer.classList.add("active");
+	const move = (moved: PointerEvent) => {
+		panelWidth = window.innerWidth - moved.clientX - resizer.offsetWidth / 2;
+		applyPanelWidth();
+	};
+	const up = () => {
+		resizer.classList.remove("active");
+		resizer.removeEventListener("pointermove", move);
+		resizer.removeEventListener("pointerup", up);
+		resizer.removeEventListener("pointercancel", up);
+		localStorage.setItem(PANEL_WIDTH, String(Math.round(panelWidth)));
+	};
+	resizer.addEventListener("pointermove", move);
+	resizer.addEventListener("pointerup", up);
+	resizer.addEventListener("pointercancel", up);
+});
+resizer.addEventListener("dblclick", () => {
+	panelWidth = 0;
+	localStorage.removeItem(PANEL_WIDTH);
+	applyPanelWidth();
+});
+
 const THEMES = ["auto", "light", "dark"] as const;
 type Theme = (typeof THEMES)[number];
 function setTheme(theme: Theme) {
@@ -1048,6 +1105,17 @@ setTheme(THEMES.find((theme) => theme === savedTheme) ?? "auto");
 themeButton.addEventListener("click", () => setTheme(THEMES[(THEMES.indexOf(themeButton.textContent.slice(7) as Theme) + 1) % THEMES.length] ?? "auto"));
 
 document.addEventListener("keydown", (event) => {
+	// Escape cancels a drag, or a pan, which returns to where it started.
+	if (event.key === "Escape" && gesture) {
+		if (gesture.mode === "pan") {
+			view.x = gesture.view.x;
+			view.y = gesture.view.y;
+			applyView();
+		}
+		endGesture(true);
+		event.preventDefault();
+		return;
+	}
 	const target = event.target;
 	if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
 		if (event.key === "Escape") target.blur();

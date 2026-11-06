@@ -55,6 +55,11 @@ export function serveWeb(store: Store, page: Bun.HTMLBundle, port: number): Bun.
 			"/api/projects": {
 				GET: (request) => (allowed(request, false) ? Response.json(store.projects()) : error(403, "forbidden")),
 			},
+			// The session-start overview for a folder that is not a registered project.
+			"/api/overview": {
+				GET: (request) =>
+					allowed(request, false) ? Response.json(overview(null, store.projects(), store.list(readScopes(null)))) : error(403, "forbidden"),
+			},
 			// The session-start overview this project's agents get.
 			"/api/projects/:id/overview": {
 				GET: (request) => {

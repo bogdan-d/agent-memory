@@ -22,7 +22,7 @@
 			}
 			:root[data-theme="light"] { color-scheme: light; }
 			:root[data-theme="dark"] { color-scheme: dark; }
-			body { margin: 0; height: 100vh; display: grid; grid-template-rows: auto 1fr; grid-template-columns: 1fr 440px; background: var(--bg); color: var(--fg); }
+			body { margin: 0; height: 100vh; display: grid; grid-template-rows: auto 1fr; grid-template-columns: minmax(0, 1fr) 6px var(--panel-width, 440px); background: var(--bg); color: var(--fg); }
 			header { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line); background: var(--panel); }
 			header input[type="search"] { width: 240px; }
 			#matches, #status { color: var(--muted); font-size: 0.9em; }
@@ -30,7 +30,9 @@
 			#status.error { color: var(--danger); }
 			#canvas { width: 100%; height: 100%; display: block; cursor: grab; user-select: none; touch-action: none; }
 			#canvas.panning { cursor: grabbing; }
-			aside { border-left: 1px solid var(--line); background: var(--panel); overflow: auto; padding: 14px 18px; }
+			#resizer { cursor: col-resize; touch-action: none; border-left: 1px solid var(--line); }
+			#resizer:hover, #resizer.active { background: var(--accent); }
+			aside { background: var(--panel); overflow: auto; padding: 14px 18px; }
 
 			/* Tree */
 			.link { fill: none; stroke: var(--line); stroke-width: 1.5; }
@@ -51,7 +53,7 @@
 			.add text { fill: #fff; font: 600 13px system-ui, sans-serif; text-anchor: middle; }
 			.node:hover .add, .node.selected .add { opacity: 1; }
 			.entry text { font: 12.5px system-ui, sans-serif; }
-			.entry .id { fill: var(--muted); font-size: 11px; }
+			.entry .id { fill: var(--muted); font-size: 11px; font-weight: 400; }
 			.entry .dot { stroke: var(--bg); stroke-width: 1.5; }
 			.entry .ring { fill: none; stroke: var(--fg); stroke-width: 1.5; }
 			.kind-fact .dot, rect.kind-fact { fill: var(--fact); }
@@ -124,6 +126,7 @@
 		<svg id="canvas">
 			<g id="viewport"><g id="links"></g><g id="nodes"></g></g>
 		</svg>
+		<div id="resizer" title="Drag to resize the panel; double-click to reset"></div>
 		<aside id="panel"></aside>
 		<script type="module" src="./tree-client.ts"></script>
 	</body>
