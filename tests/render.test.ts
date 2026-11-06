@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { renderOverview } from "../src/render";
+import { overview as measure, renderOverview } from "../src/render";
 import { Store } from "../src/store";
 
 test("the overview shows handoffs and pinned entries in full, indexes the rest, and respects its budget", () => {
@@ -24,9 +24,15 @@ test("the overview shows handoffs and pinned entries in full, indexes the rest, 
 	expect(overview).not.toContain("Indexed body.");
 	expect(overview).toContain("This list is complete.");
 
-	const cut = renderOverview(null, [], entries, 150);
+	const cut = renderOverview(null, [], entries, { budget: 150 });
 	expect(cut).toContain("Step 3 remains.");
 	expect(cut).not.toContain("Pinned body.");
 	expect(cut).toContain("more lines omitted");
 	expect(cut).not.toContain("This list is complete.");
+
+	// The tree reports how much of the budget the entries use and how much was cut.
+	expect(measure(null, [], entries)).toMatchObject({ budget: 6000, omitted: 0 });
+	const tight = measure(null, [], entries, { budget: 150 });
+	expect(tight.used).toBeLessThanOrEqual(150);
+	expect(tight.omitted).toBeGreaterThan(0);
 });

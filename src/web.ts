@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { readScopes } from "./project";
+import { overview } from "./render";
 import { groupName, rememberShape } from "./schema";
 import type { Scope, Store } from "./store";
 
@@ -52,6 +54,16 @@ export function serveWeb(store: Store, page: Bun.HTMLBundle, port: number): Bun.
 			},
 			"/api/projects": {
 				GET: (request) => (allowed(request, false) ? Response.json(store.projects()) : error(403, "forbidden")),
+			},
+			// The session-start overview this project's agents get.
+			"/api/projects/:id/overview": {
+				GET: (request) => {
+					if (!allowed(request, false)) return error(403, "forbidden");
+					const known = store.projects();
+					const project = known.find((candidate) => candidate.id === request.params.id);
+					if (!project) return error(404, "no such project");
+					return Response.json(overview(project, known, store.list(readScopes(project))));
+				},
 			},
 			"/api/projects/:id/group": {
 				PUT: async (request) => {

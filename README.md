@@ -125,11 +125,13 @@ bun tree --port 9000
 
 The page draws all memory as one left-to-right tree: `global`, then each group with its entries and member projects, then the projects in no group, each with its entries. Collapsed nodes show how many entries lie beneath them and a bar split by kind. Entries are dots coloured by kind, pinned ones ringed and starred; retired entries stay hidden until you show them. Groups whose entries no project reads, because the group has no members left, are marked and listed in the summary.
 
-- **Navigate:** drag the background to pan, scroll to zoom, click a node to open it and its arrow to collapse it. Expand all, collapse all and fit act on the whole tree.
+- **Navigate:** scroll or drag the background to pan (Shift+scroll pans sideways), Ctrl+scroll or pinch to zoom, click a node to open it and its arrow to collapse it. Expand all, collapse all and fit act on the whole tree; fit never shrinks text below a readable size, so a tall tree shows its top and you scroll for the rest.
+- **Live:** the page checks for changes every few seconds and when the tab becomes visible again, so entries agents save appear without a reload. An open form or a focused panel control is left as it is.
 - **Filter:** text matches entry IDs, keys, titles, content and evidence, and project and group names. Matches are highlighted, everything else is dimmed, and the path to every match is opened.
 - **Summary:** totals per scope and kind, with pinned entries, open handoffs and retired entries. Click a row to show that scope in the tree.
 - **Entries:** clicking one shows its content, evidence and revision history, with edit, retire, move and, for retired entries, permanent delete. These behave as in the inspector. The + on global, a group or a project adds an entry there.
 - **Move:** drag an entry onto global, a group or a project, or choose the target in its panel.
+- **What its agents see:** a project's panel shows the session-start overview its agents get, with how much of the 6,000-character entry budget it uses and how many lines were cut. Cut entries reach agents only through `recall`.
 - **Regroup:** drag a project onto a group or onto “no group”, or pick a group in its panel, where you can also name a new one. The page asks first, because a project's agents read its group's entries; it names the entries the project gains and loses access to.
 
 Theme follows the system and can be switched to light or dark. The server, like the inspector's, listens on `127.0.0.1` only and accepts API requests only from the page itself.
@@ -138,7 +140,7 @@ Theme follows the system and can be switched to light or dark. The server, like 
 
 | Tool | Behavior |
 |---|---|
-| `recall` | With a query, searches the project, group and global scopes. Without one, returns the overview. Reads another project when given its ID. |
+| `recall` | With a query, searches the project, group and global scopes. Without one, returns the overview. Reads another project when given its ID; that project's overview leaves out the usage guidance, which the agent already has. |
 | `get` | Complete entries by ID, including retired ones. |
 | `remember` | Creates an entry, or revises the one with the same scope and key. Revising requires `expected_revision`; a mismatch is refused and returns the current entry. |
 | `retire` | Retires an entry. Used for obsolete facts and picked-up handoffs. |

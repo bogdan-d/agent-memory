@@ -35,6 +35,14 @@ test("the tree page lists projects and regroups them, validating group names and
 			["web", null],
 			["api", "shop"],
 		]);
+		// The overview is the one the project's agents get at session start.
+		store.remember({ scope: "group:shop", key: "deploy", kind: "fact", title: "Deploy with make", content: "make deploy", evidence: [], pinned: false, author: "test" });
+		const overview = (await (await fetch(url("/api/projects/api/overview"))).json()) as { text: string; omitted: number };
+		expect(overview.text).toContain("Project: api · group: shop");
+		expect(overview.text).toContain("Deploy with make (group:shop, fact)");
+		expect(overview.omitted).toBe(0);
+		expect((await fetch(url("/api/projects/nope/overview"))).status).toBe(404);
+
 		// A new group exists as soon as a project is put in it, and becomes a scope entries can use.
 		await regroup("web", { group: "new-group" });
 		expect(await (await fetch(url("/api/scopes"))).json()).toEqual(["global", "group:new-group", "group:shop", "project:api", "project:web"]);

@@ -61,7 +61,8 @@ export function createServer(store: Store): McpServer {
 		({ query, project: id, cwd }) => {
 			const project = id ? projectNamed(id) : projectAt(cwd);
 			const scopes = readScopes(project);
-			if (!query?.trim()) return text(renderOverview(project, store.projects(), store.list(scopes)));
+			// Another project's overview leaves out the guidance, which the agent already has from its own.
+			if (!query?.trim()) return text(renderOverview(project, store.projects(), store.list(scopes), { guidance: !id }));
 			const found = store.search(scopes, query);
 			return text(`${describeProject(project, store.projects())}\n\n${found.length ? renderEntries(found) : "No matching entries."}`);
 		},

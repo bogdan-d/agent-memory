@@ -67,7 +67,10 @@ test("an MCP client can save, recall, hit a revision conflict, retire, and share
 
 		// From outside any project, the overview names the projects, and one can be read by ID.
 		expect((await call("recall", {})).text).toContain("Projects with memory: backend, frontend.");
-		expect((await call("recall", { project: "frontend" })).text).toContain("Ticket portal");
+		expect((await call("recall", {})).text).toContain("save it with remember");
+		const other = (await call("recall", { project: "frontend" })).text;
+		expect(other).toContain("Ticket portal");
+		expect(other).not.toContain("save it with remember");
 		expect((await call("recall", { project: "nope" })).text).toContain("Projects with memory: backend, frontend");
 
 		// A plain folder gets project memory once registered.

@@ -1,5 +1,6 @@
 /// <reference lib="dom" />
 import { KINDS, type Kind } from "./schema";
+import type { Overview } from "./render";
 import type { Entry, Project, Scope } from "./store";
 
 const $ = <T extends Element>(id: string) => document.getElementById(id) as unknown as T;
@@ -408,8 +409,11 @@ function zoomAt(x: number, y: number, factor: number) {
 	applyView();
 }
 
-// Fits the whole tree, or with a minimum scale keeps text readable and shows the top of the tree.
-function fit(minimum = 0.25) {
+// Scale below which labels get hard to read.
+const READABLE = 0.8;
+
+// Fits the whole tree if it fits at a readable scale; otherwise shows its top-left corner, and scrolling pans the rest.
+function fit() {
 	const box = canvas.getBoundingClientRect();
 	const placed = [...current.values()];
 	if (!placed.length) return;
@@ -417,7 +421,7 @@ function fit(minimum = 0.25) {
 	const right = Math.max(...placed.map((item) => item.x + item.w));
 	const top = Math.min(...placed.map((item) => item.y)) - ROW;
 	const bottom = Math.max(...placed.map((item) => item.y)) + ROW;
-	view.k = Math.min(1, Math.max(minimum, Math.min((box.width - 48) / (right - left), (box.height - 24) / (bottom - top))));
+	view.k = Math.min(1, Math.max(READABLE, Math.min((box.width - 48) / (right - left), (box.height - 24) / (bottom - top))));
 	view.x = 24 - left * view.k;
 	view.y = Math.max(12, (box.height - (bottom - top) * view.k) / 2) - top * view.k;
 	applyView();
@@ -441,8 +445,19 @@ canvas.addEventListener(
 	"wheel",
 	(event) => {
 		event.preventDefault();
-		const box = canvas.getBoundingClientRect();
-		zoomAt(event.clientX - box.left, event.clientY - box.top, Math.exp(-event.deltaY * (event.deltaMode ? 0.05 : 0.0015)));
+		// Line and page deltas become pixels.
+		const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? canvas.clientHeight : 1;
+		// Ctrl+wheel zooms; trackpad pinches arrive as Ctrl+wheel too.
+		if (event.ctrlKey || event.metaKey) {
+			const box = canvas.getBoundingClientRect();
+			const step = Math.min(0.25, Math.max(-0.25, -event.deltaY * unit * 0.002));
+			return zoomAt(event.clientX - box.left, event.clientY - box.top, Math.exp(step));
+		}
+		// Plain wheel pans; Shift turns a mouse wheel's vertical scroll sideways.
+		const [dx, dy] = event.shiftKey && !event.deltaX ? [event.deltaY, 0] : [event.deltaX, event.deltaY];
+		view.x -= dx * unit;
+		view.y -= dy * unit;
+		applyView();
 	},
 	{ passive: false },
 );
@@ -571,20 +586,50 @@ async function drop(id: string, target: string) {
 
 // Operations
 
+const fetchAll = () => Promise.all([api<Entry[]>("/api/entries"), api<Project[]>("/api/projects"), api<Scope[]>("/api/scopes")]);
+type Data = Awaited<ReturnType<typeof fetchAll>>;
+
+// The data last shown, to tell whether a refresh found changes.
+let snapshot = "";
+function apply(data: Data) {
+	[entries, projects, scopes] = data;
+	snapshot = JSON.stringify(data);
+}
+
 async function reload(anchor?: string) {
-	[entries, projects, scopes] = await Promise.all([api<Entry[]>("/api/entries"), api<Project[]>("/api/projects"), api<Scope[]>("/api/scopes")]);
+	apply(await fetchAll());
 	const first = !tree;
 	if (first) for (const group of groupNames()) expanded.add(`group:${group}`);
 	render(anchor);
 	if (!nodes.has(selected) && !selectedEntry()) selected = "root";
-	if (first) fit(0.8);
+	if (first) fit();
 	showPanel();
+}
+
+// Picks up changes made outside this page, such as agents saving memories. Leaves an open form or a focused panel control alone.
+let offline = false;
+async function refresh() {
+	if (document.hidden || gesture) return;
+	try {
+		const data = await fetchAll();
+		if (offline) notify("");
+		offline = false;
+		if (gesture || JSON.stringify(data) === snapshot) return;
+		apply(data);
+		render();
+		if (!nodes.has(selected) && !selectedEntry()) selected = "root";
+		if (!panel.querySelector("form") && !panel.contains(document.activeElement)) showPanel();
+	} catch {
+		offline = true;
+		notify("Cannot reach the server; changes made elsewhere will show once it is back.", true);
+	}
 }
 
 const selectedEntry = () => (selected.startsWith("entry:") ? entries.find((entry) => `entry:${entry.id}` === selected) : undefined);
 
 function select(id: string) {
 	selected = id;
+	overviewOpen = false;
 	for (const parent of ancestors(id)) expanded.add(parent);
 	render(id);
 	reveal(id);
@@ -663,11 +708,15 @@ async function remove(entry: Entry, revisions: number) {
 
 const when = (iso: string) => new Date(iso).toLocaleString();
 
+// Whether the selected project's panel shows the overview its agents get at session start.
+let overviewOpen = false;
+
 function showPanel() {
 	const entry = selectedEntry();
 	if (entry) return void showEntry(entry);
 	const node = nodes.get(selected);
 	if (!node || node.type === "root") return showSummary();
+	if (overviewOpen && node.project) return void showOverview(node.project);
 	showScope(node);
 }
 
@@ -790,10 +839,37 @@ function showScope(node: TreeNode) {
 		el("p", { className: "meta", textContent: [project.path, project.remote].filter(Boolean).join(" · ") }),
 		el("p", { textContent: `Its agents read its own entries, ${project.group ? `group:${project.group} and ` : ""}global.` }),
 		countsLine(node),
-		el("div", { className: "actions" }, ...add),
+		el(
+			"div",
+			{ className: "actions" },
+			...add,
+			el("button", { textContent: "What its agents see", onclick: () => ((overviewOpen = true), showPanel()) }),
+		),
 		el("h2", { textContent: "Group" }),
 		el("div", { className: "actions" }, choice, name, el("button", { textContent: "Change group", onclick: change })),
 		el("p", { className: "meta", textContent: "Or drag the project onto a group, or onto “no group”." }),
+	);
+}
+
+async function showOverview(project: Project) {
+	const id = selected;
+	const result = await api<Overview>(`/api/projects/${encodeURIComponent(project.id)}/overview`).catch((failure: unknown) => message(failure));
+	// A later selection may have finished first.
+	if (selected !== id || !overviewOpen) return;
+	const back = el("button", { textContent: "Back", onclick: () => ((overviewOpen = false), showPanel()) });
+	if (typeof result === "string") return panel.replaceChildren(el("p", { className: "error", textContent: result }), back);
+	const { text, used, budget, omitted } = result;
+	const percent = Math.round((used / budget) * 100);
+	panel.replaceChildren(
+		el("h1", { textContent: `Session start in ${project.id}` }),
+		el("p", { className: "meta", textContent: "What an agent in this project gets in its context when a session starts. Index lines are fetched in full with get." }),
+		el("meter", { min: 0, max: budget, value: used, low: budget * 0.75, high: budget * 0.9, optimum: 0 }),
+		el("p", { className: "meta", textContent: `Entries use ${used.toLocaleString()} of ${budget.toLocaleString()} characters (${percent}%).` }),
+		omitted
+			? el("p", { className: "warning", textContent: `${plural(omitted, "line was", "lines were")} cut. Agents here see those entries only if recall finds them.` })
+			: el("p", { className: "meta", textContent: `Nothing is cut; ${(budget - used).toLocaleString()} characters left.` }),
+		el("div", { className: "actions" }, back, el("button", { textContent: "Copy", onclick: () => void navigator.clipboard.writeText(text) })),
+		el("div", { className: "content", textContent: text }),
 	);
 }
 
@@ -854,7 +930,8 @@ function showSummary() {
 			{ className: "meta" },
 			el("li", { textContent: "Click a node to open it, its arrow to collapse it, and + to add an entry there." }),
 			el("li", { textContent: "Drag an entry onto global, a group or a project to move it; drag a project onto a group or “no group” to regroup it." }),
-			el("li", { textContent: "Drag the background to pan, scroll to zoom." }),
+			el("li", { textContent: "Scroll or drag the background to pan (Shift+scroll pans sideways); Ctrl+scroll or pinch to zoom." }),
+			el("li", { textContent: "Changes made by agents show up within a few seconds." }),
 			el("li", {}, el("kbd", { textContent: "/" }), " filter · ", el("kbd", { textContent: "Esc" }), " back to the summary"),
 		),
 	);
@@ -984,3 +1061,5 @@ document.addEventListener("keydown", (event) => {
 });
 
 void reload().catch((failure: unknown) => notify(message(failure), true));
+setInterval(() => void refresh(), 4000);
+document.addEventListener("visibilitychange", () => void refresh());

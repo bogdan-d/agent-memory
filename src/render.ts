@@ -41,10 +41,24 @@ export function describeProject(project: Project | null, known: Project[]): stri
 	return `Project: none here. A git repository gets its project memory on the first project-scoped save. A folder outside git needs register_project, once the user agrees.${others}`;
 }
 
+export interface Overview {
+	text: string;
+	// Characters of the budget the entries use, and how many full entries or index lines were cut.
+	used: number;
+	budget: number;
+	omitted: number;
+}
+
 // Session overview: usage guidance, then open handoffs and pinned entries in full and everything else as a
 // one-line index. Entries that would exceed the budget are cut, with a pointer to recall; otherwise the list
-// says it is complete, so agents fetch with get instead of searching.
-export function renderOverview(project: Project | null, known: Project[], entries: Entry[], budget = 6000): string {
+// says it is complete, so agents fetch with get instead of searching. Leave out the guidance when the agent already
+// has it, such as when it reads another project's overview.
+export function overview(
+	project: Project | null,
+	known: Project[],
+	entries: Entry[],
+	{ budget = 6000, guidance = true }: { budget?: number; guidance?: boolean } = {},
+): Overview {
 	const handoffs = entries.filter((entry) => entry.kind === "handoff");
 	const pinned = entries.filter((entry) => entry.pinned && entry.kind !== "handoff");
 	const rest = entries.filter((entry) => !entry.pinned && entry.kind !== "handoff");
@@ -56,16 +70,24 @@ export function renderOverview(project: Project | null, known: Project[], entrie
 	];
 
 	let body = entries.length ? "" : "\nNo entries yet.";
+	let omitted = 0;
 	for (const [index, block] of blocks.entries()) {
 		const separator = block.startsWith("- ") ? "\n" : "\n\n";
 		if (body.length + separator.length + block.length > budget) {
-			body += `\n\n(${blocks.length - index} more lines omitted. Use recall with a query to find them.)`;
+			omitted = blocks.length - index;
 			break;
 		}
 		body += separator + block;
 	}
-	if (entries.length && !body.includes("more lines omitted")) body += "\n\nThis list is complete. Fetch relevant entries with get; recall would return nothing new.";
-	return `# Agent memory\n\n${GUIDANCE}\n\n${describeProject(project, known)}${body}`;
+	const used = body.length;
+	if (omitted) body += `\n\n(${omitted} more lines omitted. Use recall with a query to find them.)`;
+	else if (entries.length) body += "\n\nThis list is complete. Fetch relevant entries with get; recall would return nothing new.";
+	const intro = guidance ? `${GUIDANCE}\n\n` : "";
+	return { text: `# Agent memory\n\n${intro}${describeProject(project, known)}${body}`, used, budget, omitted };
+}
+
+export function renderOverview(...args: Parameters<typeof overview>): string {
+	return overview(...args).text;
 }
 
 export function renderExport(entries: Entry[]): string {
