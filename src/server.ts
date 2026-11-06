@@ -3,7 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { readScopes, register, resolveProject, writeScope } from "./project";
 import { describeProject, renderEntries, renderEntry, renderOverview } from "./render";
-import { rememberShape } from "./schema";
+import { groupName, rememberShape } from "./schema";
 import type { Store } from "./store";
 
 const INSTRUCTIONS =
@@ -133,9 +133,7 @@ export function createServer(store: Store): McpServer {
 			description:
 				"Put projects in a group so they share group-scoped entries, creating the group if needed. Call it only after the user has agreed to the group and its members.",
 			inputSchema: {
-				group: z
-					.string()
-					.regex(/^[a-z0-9][a-z0-9-]{0,39}$/, "lowercase kebab-case, at most 40 characters")
+				group: groupName
 					.nullable()
 					.describe("Group name. null removes the projects from their group."),
 				paths: z.array(z.string()).min(1).max(50).describe("Absolute paths of the repositories or directories to assign."),

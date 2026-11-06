@@ -7,6 +7,7 @@ import { renderEntries, renderEntry, renderExport, renderOverview } from "./rend
 import { rememberInput } from "./schema";
 import { serve } from "./server";
 import { Store } from "./store";
+import { tree } from "./tree";
 
 const USAGE = `agent-memory <command>
 
@@ -22,6 +23,7 @@ const USAGE = `agent-memory <command>
   retire <id>                          Retire an entry
   export                               Print all active entries as Markdown
   inspect [--port n]                   Browse, add, edit, move, retire and delete entries in a local web page
+  tree [--port n]                      Edit entries and project groups in a collapsible tree in a local web page
   backup [directory]                   Write a consistent database snapshot
 
 Database: $AGENT_MEMORY_DB, default ~/.local/share/agent-memory/memory.sqlite3`;
@@ -134,6 +136,11 @@ async function main(command: string | undefined, args: string[]): Promise<void> 
 		case "inspect": {
 			const { values } = parseArgs({ args, options: { port: { type: "string", default: "4870" } } });
 			return console.log(`Agent memory inspector: ${inspect(store, Number(values.port)).url}`);
+		}
+
+		case "tree": {
+			const { values } = parseArgs({ args, options: { port: { type: "string", default: "4871" } } });
+			return console.log(`Agent memory tree: ${tree(store, Number(values.port)).url}`);
 		}
 
 		case "export":

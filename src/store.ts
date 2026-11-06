@@ -175,6 +175,12 @@ export class Store {
 		);
 	}
 
+	// Puts a project in a group, or takes it out of its group with null. Returns null if there is no such project.
+	setGroup(id: string, group: string | null): Project | null {
+		const row = this.db.query<ProjectRow, [string | null, string]>("UPDATE projects SET grp = ? WHERE id = ? RETURNING *").get(group, id);
+		return row ? toProject(row) : null;
+	}
+
 	projects(): Project[] {
 		return this.db.query<ProjectRow, []>("SELECT * FROM projects ORDER BY grp, id").all().map(toProject);
 	}

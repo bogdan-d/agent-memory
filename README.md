@@ -114,6 +114,26 @@ The page lists every entry grouped by scope, retired ones included, with text, s
 
 The server listens on `127.0.0.1` only, and its API accepts requests only from the page itself. Stop it with Ctrl+C.
 
+## Memory tree
+
+For an overview of everything at once, start the tree editor instead and open the address it prints:
+
+```bash
+bun tree                  # http://127.0.0.1:4871
+bun tree --port 9000
+```
+
+The page draws all memory as one left-to-right tree: `global`, then each group with its entries and member projects, then the projects in no group, each with its entries. Collapsed nodes show how many entries lie beneath them and a bar split by kind. Entries are dots coloured by kind, pinned ones ringed and starred; retired entries stay hidden until you show them. Groups whose entries no project reads, because the group has no members left, are marked and listed in the summary.
+
+- **Navigate:** drag the background to pan, scroll to zoom, click a node to open it and its arrow to collapse it. Expand all, collapse all and fit act on the whole tree.
+- **Filter:** text matches entry IDs, keys, titles, content and evidence, and project and group names. Matches are highlighted, everything else is dimmed, and the path to every match is opened.
+- **Summary:** totals per scope and kind, with pinned entries, open handoffs and retired entries. Click a row to show that scope in the tree.
+- **Entries:** clicking one shows its content, evidence and revision history, with edit, retire, move and, for retired entries, permanent delete. These behave as in the inspector. The + on global, a group or a project adds an entry there.
+- **Move:** drag an entry onto global, a group or a project, or choose the target in its panel.
+- **Regroup:** drag a project onto a group or onto “no group”, or pick a group in its panel, where you can also name a new one. The page asks first, because a project's agents read its group's entries; it names the entries the project gains and loses access to.
+
+Theme follows the system and can be switched to light or dark. The server, like the inspector's, listens on `127.0.0.1` only and accepts API requests only from the page itself.
+
 ## MCP tools
 
 | Tool | Behavior |
@@ -140,6 +160,7 @@ projects                                Registered projects
 register [--group g] [--id slug] <path>...
                                         Register projects or set their group; without --group the group is cleared
 inspect [--port n]                      Browse, add, edit, move, retire and delete entries in a local web page (default port 4870)
+tree [--port n]                         Edit entries and project groups in a collapsible tree in a local web page (default port 4871)
 export                                  All active entries as Markdown
 backup [directory]                      Consistent snapshot, by default under backups/ next to the database
 ```
@@ -149,5 +170,5 @@ backup [directory]                      Consistent snapshot, by default under ba
 ## Limits
 
 - One machine. The database uses SQLite's write-ahead log, which needs local storage and serializes writers on a single host.
-- A project ID cannot be renamed, a project cannot be unregistered, and an entry cannot be renamed. Only the inspector moves entries between scopes.
+- A project ID cannot be renamed, a project cannot be unregistered, and an entry cannot be renamed. Only the inspector and the tree move entries between scopes.
 - No semantic search and no background extraction. Agents choose what to save.

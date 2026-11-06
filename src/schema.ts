@@ -6,6 +6,9 @@ export type Kind = (typeof KINDS)[number];
 export const LEVELS = ["project", "group", "global"] as const;
 export type Level = (typeof LEVELS)[number];
 
+// A group name, shared by assign_group and the inspector pages.
+export const groupName = z.string().regex(/^[a-z0-9][a-z0-9-]{0,39}$/, "lowercase kebab-case, at most 40 characters");
+
 // Input shape for writing an entry, shared by the MCP tool and the CLI.
 export const rememberShape = {
 	scope: z
