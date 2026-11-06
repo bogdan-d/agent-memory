@@ -12,7 +12,9 @@ test("the overview shows handoffs and pinned entries in full, indexes the rest, 
 	store.remember({ ...base, key: "a", kind: "handoff", title: "Finish the import", content: "Step 3 remains.", pinned: false });
 	store.remember({ ...base, key: "b", kind: "fact", title: "Essential", content: "Pinned body.", pinned: true });
 	store.remember({ ...base, key: "c", kind: "fact", title: "Minor detail", content: "Indexed body.", pinned: false });
-	const entries = store.list(["global"]);
+	store.remember({ ...base, scope: "project:app", key: "d", kind: "decision", title: "Local rule", content: "Indexed body.", pinned: false });
+	store.remember({ ...base, scope: "project:app", key: "e", kind: "hypothesis", title: "Maybe flaky", content: "Indexed body.", pinned: false });
+	const entries = store.list(["project:app", "global"]);
 	store.close();
 	rmSync(dir, { recursive: true });
 
@@ -23,6 +25,8 @@ test("the overview shows handoffs and pinned entries in full, indexes the rest, 
 	expect(overview).toContain("Minor detail");
 	expect(overview).not.toContain("Indexed body.");
 	expect(overview).toContain("This list is complete.");
+	// The index is grouped by scope, narrowest first, and marks only unverified entries.
+	expect(overview).toMatch(/## Other entries\n\n### project:app\n- \[\d+\] Maybe flaky \(unverified\)\n- \[\d+\] Local rule\n\n### global\n- \[\d+\] Minor detail\n/);
 
 	const cut = renderOverview(null, [], entries, { budget: 150 });
 	expect(cut).toContain("Step 3 remains.");

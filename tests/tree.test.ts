@@ -39,7 +39,7 @@ test("the tree page lists projects and regroups them, validating group names and
 		store.remember({ scope: "group:shop", key: "deploy", kind: "fact", title: "Deploy with make", content: "make deploy", evidence: [], pinned: false, author: "test" });
 		const overview = (await (await fetch(url("/api/projects/api/overview"))).json()) as { text: string; omitted: number };
 		expect(overview.text).toContain("Project: api · group: shop");
-		expect(overview.text).toContain("Deploy with make (group:shop, fact)");
+		expect(overview.text).toMatch(/### group:shop\n- \[\d+\] Deploy with make\n/);
 		expect(overview.omitted).toBe(0);
 		expect((await fetch(url("/api/projects/nope/overview"))).status).toBe(404);
 		const outside = (await (await fetch(url("/api/overview"))).json()) as { text: string };

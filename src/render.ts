@@ -50,7 +50,7 @@ export interface Overview {
 }
 
 // Session overview: usage guidance, then open handoffs and pinned entries in full and everything else as a
-// one-line index. Entries that would exceed the budget are cut, with a pointer to recall; otherwise the list
+// one-line index grouped by scope. Entries that would exceed the budget are cut, with a pointer to recall; otherwise the list
 // says it is complete, so agents fetch with get instead of searching. Leave out the guidance when the agent already
 // has it, such as when it reads another project's overview.
 export function overview(
@@ -63,21 +63,42 @@ export function overview(
 	const pinned = entries.filter((entry) => entry.pinned && entry.kind !== "handoff");
 	const rest = entries.filter((entry) => !entry.pinned && entry.kind !== "handoff");
 
-	const blocks = [
-		...(handoffs.length ? ["## Open handoffs", ...handoffs.map(renderEntry)] : []),
-		...(pinned.length ? ["## Pinned", ...pinned.map(renderEntry)] : []),
-		...(rest.length ? ["## Other entries", ...rest.map((entry) => `- [${entry.id}] ${entry.title} (${entry.scope}, ${entry.kind})`)] : []),
+	// The index lists the narrowest scope first, newest first within each scope.
+	const rank = (scope: string) => (scope.startsWith("project:") ? 0 : scope.startsWith("group:") ? 1 : 2);
+	const index = Map.groupBy(
+		rest.toSorted((a, b) => rank(a.scope) - rank(b.scope)),
+		(entry) => entry.scope,
+	);
+
+	// A heading is only written together with the block after it, so a cut never leaves one dangling.
+	type Block = { type: "heading" | "entry" | "line"; text: string };
+	const heading = (text: string): Block => ({ type: "heading", text });
+	const blocks: Block[] = [
+		...(handoffs.length ? [heading("## Open handoffs"), ...handoffs.map((entry): Block => ({ type: "entry", text: renderEntry(entry) }))] : []),
+		...(pinned.length ? [heading("## Pinned"), ...pinned.map((entry): Block => ({ type: "entry", text: renderEntry(entry) }))] : []),
+		...(rest.length ? [heading("## Other entries")] : []),
+		...[...index].flatMap(([scope, list]) => [
+			heading(`### ${scope}`),
+			// Titles already read as rules or observations; only an unverified entry needs saying so.
+			...list.map((entry): Block => ({ type: "line", text: `- [${entry.id}] ${entry.title}${entry.kind === "hypothesis" ? " (unverified)" : ""}` })),
+		]),
 	];
 
 	let body = entries.length ? "" : "\nNo entries yet.";
+	let pending = "";
 	let omitted = 0;
-	for (const [index, block] of blocks.entries()) {
-		const separator = block.startsWith("- ") ? "\n" : "\n\n";
-		if (body.length + separator.length + block.length > budget) {
-			omitted = blocks.length - index;
+	for (const [position, block] of blocks.entries()) {
+		const text = `${block.type === "line" ? "\n" : "\n\n"}${block.text}`;
+		if (block.type === "heading") {
+			pending += text;
+			continue;
+		}
+		if (body.length + pending.length + text.length > budget) {
+			omitted = blocks.slice(position).filter((later) => later.type !== "heading").length;
 			break;
 		}
-		body += separator + block;
+		body += pending + text;
+		pending = "";
 	}
 	const used = body.length;
 	if (omitted) body += `\n\n(${omitted} more lines omitted. Use recall with a query to find them.)`;
