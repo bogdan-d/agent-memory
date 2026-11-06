@@ -53,6 +53,21 @@ test("revising needs the current revision, and history keeps every version", () 
 	]);
 });
 
+test("moving keeps the ID and history, and refuses a stale revision or a taken key", () => {
+	const created = store.remember(write());
+	store.remember(write({ scope: "global", title: "Global sync" }));
+	if (!created.ok) throw new Error("create failed");
+	const { id } = created.entry;
+
+	expect(store.move(id, "global", 1, "test")).toMatchObject({ ok: false, current: { scope: "global" } });
+	expect(store.move(id, "group:shop", 2, "test")).toMatchObject({ ok: false, current: { id, revision: 1 } });
+
+	const moved = store.move(id, "group:shop", 1, "mover");
+	expect(moved).toMatchObject({ ok: true, entry: { id, scope: "group:shop", revision: 2, author: "mover" } });
+	expect(store.history(id).map((entry) => entry.scope)).toEqual(["project:backend", "group:shop"]);
+	expect(store.search(["group:shop"], "rsync").map((entry) => entry.id)).toEqual([id]);
+});
+
 test("search stays inside the requested scopes", () => {
 	store.remember(write());
 	store.remember(write({ scope: "group:shop", key: "portal", title: "Ticket portal id", content: "Staging tickets live in portal 42." }));

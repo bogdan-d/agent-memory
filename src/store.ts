@@ -102,6 +102,11 @@ const MIGRATIONS = [
 
 	CREATE VIRTUAL TABLE entries_fts USING fts5 (key, title, content, tokenize = 'porter unicode61');
 	`,
+	// Entries can move between scopes, so each revision records the scope it was written in.
+	`
+	ALTER TABLE history ADD COLUMN scope TEXT;
+	UPDATE history SET scope = (SELECT scope FROM entries WHERE entries.id = history.entry_id);
+	`,
 ];
 
 export function defaultDbPath(): string {
@@ -220,7 +225,7 @@ export class Store {
 	history(id: number): Entry[] {
 		return this.db
 			.query<EntryRow, [number]>(
-				`SELECT e.id, e.scope, e.key, e.created_at, h.at AS updated_at, h.revision,
+				`SELECT e.id, COALESCE(h.scope, e.scope) AS scope, e.key, e.created_at, h.at AS updated_at, h.revision,
 				        h.kind, h.title, h.content, h.evidence, h.pinned, h.retired, h.author
 				 FROM history h JOIN entries e ON e.id = h.entry_id WHERE h.entry_id = ? ORDER BY h.revision`,
 			)
@@ -249,6 +254,34 @@ export class Store {
 			.immediate();
 	}
 
+	// Moves an entry to another scope, as a new revision that keeps its ID and history. Refused, changing nothing, if the
+	// entry is not at expectedRevision or the target scope already has its key; current is then the entry in the way.
+	move(id: number, scope: Scope, expectedRevision: number, author: string): WriteResult {
+		return this.db
+			.transaction((): WriteResult => {
+				const current = this.get([id])[0] ?? null;
+				if (current?.revision !== expectedRevision) return { ok: false, current };
+				const occupant = this.find(scope, current.key);
+				if (occupant) return { ok: false, current: occupant };
+				this.db.run("UPDATE entries SET scope = ? WHERE id = ?", [scope, id]);
+				return { ok: true, entry: this.save({ ...current, scope, author }, current) };
+			})
+			.immediate();
+	}
+
+	// Permanently removes a retired entry and its history. Returns false, changing nothing, if the entry is missing or active.
+	delete(id: number): boolean {
+		return this.db
+			.transaction((): boolean => {
+				if (!this.get([id])[0]?.retired) return false;
+				this.db.run("DELETE FROM history WHERE entry_id = ?", [id]);
+				this.db.run("DELETE FROM entries_fts WHERE rowid = ?", [id]);
+				this.db.run("DELETE FROM entries WHERE id = ?", [id]);
+				return true;
+			})
+			.immediate();
+	}
+
 	private save(next: EntryFields & { retired: boolean }, current: Entry | null): Entry {
 		const at = new Date().toISOString();
 		const revision = (current?.revision ?? 0) + 1;
@@ -266,9 +299,9 @@ export class Store {
 			.get(next.scope, next.key, revision, at, at, ...state);
 		if (!row) throw new Error("entry write returned no row");
 		this.db.run(
-			`INSERT INTO history (entry_id, revision, at, kind, title, content, evidence, pinned, retired, author)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			[row.id, revision, at, ...state],
+			`INSERT INTO history (entry_id, revision, at, scope, kind, title, content, evidence, pinned, retired, author)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			[row.id, revision, at, next.scope, ...state],
 		);
 		this.db.run("DELETE FROM entries_fts WHERE rowid = ?", [row.id]);
 		if (!next.retired) {

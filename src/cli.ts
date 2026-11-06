@@ -21,7 +21,7 @@ const USAGE = `agent-memory <command>
                                        Create or revise an entry; content comes from stdin when omitted
   retire <id>                          Retire an entry
   export                               Print all active entries as Markdown
-  inspect [--port n]                   Browse, edit and retire entries in a local web page
+  inspect [--port n]                   Browse, add, edit, move, retire and delete entries in a local web page
   backup [directory]                   Write a consistent database snapshot
 
 Database: $AGENT_MEMORY_DB, default ~/.local/share/agent-memory/memory.sqlite3`;

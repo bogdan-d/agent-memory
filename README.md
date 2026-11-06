@@ -97,14 +97,22 @@ Remove the hook entry, run `claude mcp remove --scope user agent-memory` and `co
 
 ## Inspecting memories
 
-To browse, edit and retire entries yourself, start the local inspector from the repository and open the address it prints:
+To browse, add, edit, move, retire and delete entries yourself, start the local inspector from the repository and open the address it prints:
 
 ```bash
 bun inspect               # http://127.0.0.1:4870
 bun inspect --port 9000
 ```
 
-The page lists every entry, retired ones included, with text, scope and kind filters, each entry's revision history, and times in local time. Edits save a new revision as author `inspector` and fail if the entry changed since it was loaded. Editing a retired entry revives it. The server listens on `127.0.0.1` only, and its API accepts requests only from the page itself. Stop it with Ctrl+C.
+The page lists every entry grouped by scope, retired ones included, with text, scope and kind filters, each entry's revision history, and times in local time.
+
+- **Add:** a new entry goes to global scope, a group or a registered project. If the scope already has the key, the page offers to edit that entry instead.
+- **Edit:** saves a new revision as author `inspector`, and fails if the entry changed since it was loaded. Editing a retired entry revives it.
+- **Move:** moves an entry to global scope, a group or a registered project as a new revision, keeping its ID and history. It fails if the target scope already has the key, or if the entry changed since it was loaded.
+- **Delete:** only retired entries can be deleted. Deleting removes the entry and its whole history for good, and frees its key.
+- **Keys:** `j`/`k` or the arrow keys move through the list, `/` searches, `n` adds, `e` edits, Ctrl+Enter saves and Esc leaves a field.
+
+The server listens on `127.0.0.1` only, and its API accepts requests only from the page itself. Stop it with Ctrl+C.
 
 ## MCP tools
 
@@ -131,7 +139,7 @@ retire <id>
 projects                                Registered projects
 register [--group g] [--id slug] <path>...
                                         Register projects or set their group; without --group the group is cleared
-inspect [--port n]                      Browse, edit and retire entries in a local web page (default port 4870)
+inspect [--port n]                      Browse, add, edit, move, retire and delete entries in a local web page (default port 4870)
 export                                  All active entries as Markdown
 backup [directory]                      Consistent snapshot, by default under backups/ next to the database
 ```
@@ -141,5 +149,5 @@ backup [directory]                      Consistent snapshot, by default under ba
 ## Limits
 
 - One machine. The database uses SQLite's write-ahead log, which needs local storage and serializes writers on a single host.
-- A project ID cannot be renamed, a project cannot be unregistered, and an entry cannot be moved between scopes or renamed.
+- A project ID cannot be renamed, a project cannot be unregistered, and an entry cannot be renamed. Only the inspector moves entries between scopes.
 - No semantic search and no background extraction. Agents choose what to save.

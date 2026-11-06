@@ -10,15 +10,24 @@
 			.filters { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px; border-bottom: 1px solid #8884; }
 			.filters input[type="search"] { grid-column: 1 / -1; }
 			#list { list-style: none; margin: 0; padding: 0; overflow: auto; }
-			#list li { padding: 8px 10px; border-bottom: 1px solid #8882; cursor: pointer; }
-			#list li:hover { background: #8881; }
-			#list li.selected { background: #8883; }
+			#list li.entry { padding: 8px 10px; border-bottom: 1px solid #8882; cursor: pointer; }
+			#list li.entry:hover { background: #8881; }
+			#list li.selected { background: #8883; box-shadow: inset 3px 0 #2a7de1; }
 			#list li.retired { opacity: 0.55; }
+			#list li.group-header { position: sticky; top: 0; padding: 4px 10px; font-weight: 600; background: Canvas; border-bottom: 1px solid #8884; }
+			.hints { margin-top: auto; padding: 6px 10px; border-top: 1px solid #8884; color: #888; font-size: 0.85em; }
+			kbd { font-family: ui-monospace, monospace; padding: 0 4px; border: 1px solid #8886; border-radius: 3px; }
 			main { overflow: auto; padding: 16px 24px; }
 			h1 { font-size: 1.3em; margin: 0 0 4px; }
 			.meta, small { color: #888; }
 			.tag { display: inline-block; padding: 0 6px; border-radius: 4px; background: #8883; font-size: 0.85em; margin-right: 4px; }
 			.retired-tag { background: #c334; }
+			.pinned-tag { background: #8a4ce144; }
+			.kind-fact { background: #2a7de133; }
+			.kind-decision { background: #2da44e33; }
+			.kind-hypothesis { background: #d4a72c44; }
+			.kind-handoff { background: #e1662a44; }
+			button.danger { color: #d33; }
 			.content { white-space: pre-wrap; font-family: ui-monospace, monospace; background: #8881; padding: 12px; border-radius: 6px; }
 			form { display: grid; gap: 8px; max-width: 900px; }
 			form input:not([type="checkbox"]), form textarea { width: 100%; box-sizing: border-box; }
@@ -26,6 +35,7 @@
 			textarea.evidence { min-height: 5em; }
 			.actions { display: flex; gap: 8px; margin: 12px 0; }
 			.error { color: #d33; }
+			.move { margin-left: auto; display: flex; gap: 6px; align-items: center; }
 			details { margin: 8px 0; }
 		</style>
 	</head>
@@ -36,10 +46,12 @@
 				<select id="scope"></select>
 				<select id="kind"></select>
 				<label><input id="retired" type="checkbox" /> Show retired</label>
+				<button id="new" type="button">New entry</button>
 			</div>
 			<ul id="list"></ul>
+			<div class="hints"><kbd>j</kbd>/<kbd>k</kbd> move · <kbd>/</kbd> search · <kbd>n</kbd> new · <kbd>e</kbd> edit · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> save · <kbd>Esc</kbd> leave field</div>
 		</aside>
-		<main id="detail"><p class="meta">Select an entry.</p></main>
+		<main id="detail"></main>
 		<script type="module" src="./inspect-client.ts"></script>
 	</body>
 </html>
