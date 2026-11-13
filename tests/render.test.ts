@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { overview as measure, renderOverview } from "../src/render";
+import { OVERVIEW_BUDGET, overview as measure, renderOverview } from "../src/render";
 import { Store } from "../src/store";
 
 test("the overview shows handoffs and pinned entries in full, indexes the rest, and respects its budget", () => {
@@ -35,7 +35,7 @@ test("the overview shows handoffs and pinned entries in full, indexes the rest, 
 	expect(cut).not.toContain("This list is complete.");
 
 	// The tree reports how much of the budget the entries use and how much was cut.
-	expect(measure(null, [], entries)).toMatchObject({ budget: 6000, omitted: 0 });
+	expect(measure(null, [], entries)).toMatchObject({ budget: OVERVIEW_BUDGET, omitted: 0 });
 	const tight = measure(null, [], entries, { budget: 150 });
 	expect(tight.used).toBeLessThanOrEqual(150);
 	expect(tight.omitted).toBeGreaterThan(0);
